@@ -19,7 +19,7 @@ The system allows monitoring of processes, their subprocesses, CPU/memory usage,
 - Simple API key authentication for agent.
 - Clean, responsive UI.
 - Search Functionality to search processesses.
-
+- Fetch only for active users who ran .exe file and not show all the user's data.
 ## Architecture Overview
 
 [Windows Machine]
