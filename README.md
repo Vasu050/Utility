@@ -20,6 +20,7 @@ The system allows monitoring of processes, their subprocesses, CPU/memory usage,
 - Clean, responsive UI.
 - Search Functionality to search processesses.
 - Fetch only for active users who ran .exe file and not show all the user's data.
+- Multiple connected active users data.
 ## Architecture Overview
 
 [Windows Machine]
@@ -36,4 +37,9 @@ Frontend (HTML/JS)
 - Currently same data is getting updated for processes everytime we run exe, this is done to improve visibility and only get latest updates and not get older updates or offline users details. So we can implement filter to get historical data as well.
 - Visualisation using charts or graphs or processes.
 - we can fetch data at regular intervals and update the frontend if data changes or can use web sockets to build a persistent connection.
+
+  ## How to run
+  - First run the server
+  - then open the .exe file in dist folder
+  - open the link in the browser
   
