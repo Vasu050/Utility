@@ -1,0 +1,232 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Agent Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      height: 100vh;
+      margin: 0;
+    }
+
+    #computers {
+      width: 25%;
+      border-right: 2px solid #ccc;
+      padding: 10px;
+      overflow-y: auto;
+      background-color: #f9f9f9;
+    }
+
+    #details {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #system-table-container, #process-table-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      border-top: 1px solid #ccc;
+    }
+
+    .computer {
+      padding: 8px;
+      border: 1px solid #999;
+      margin-bottom: 5px;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: background 0.3s;
+    }
+
+    .computer:hover {
+      background: #e0f7fa;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 8px;
+      border: 1px solid #ccc;
+      text-align: left;
+    }
+
+    th {
+      background-color: #00796b;
+      color: white;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+
+    .section-header {
+      display: flex;
+      gap: 10px;
+      padding: 10px;
+      background: #f0f0f0;
+      border-bottom: 1px solid #ccc;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .section-header button {
+      padding: 5px 10px;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      background-color: #00796b;
+      color: white;
+      transition: background 0.3s;
+    }
+
+    .section-header button:hover {
+      background-color: #004d40;
+    }
+
+    .arrow {
+      cursor: pointer;
+      margin-right: 5px;
+    }
+
+    .child-row {
+      display: none;
+    }
+
+    .indent {
+      padding-left: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div id="computers">
+    <h3>Computers</h3>
+    <div id="computer-list"></div>
+  </div>
+
+  <div id="details">
+    <div class="section-header">
+      <button id="show-system">System Details</button>
+      <button id="show-process">Running Processes</button>
+    </div>
+
+    <div id="system-table-container">Select a computer...</div>
+    <div id="process-table-container" style="display:none;"></div>
+  </div>
+
+  <script>
+    let selectedComputerData = null;
+let allAgents = [];
+
+// Load computers list
+async function loadComputers() {
+    const res = await fetch("/", { headers: { "X-Requested-With": "XMLHttpRequest" }});
+    allAgents = await res.json();
+
+    const listDiv = document.getElementById("computer-list");
+    listDiv.innerHTML = "";
+
+    allAgents.forEach(agent => {
+        const div = document.createElement("div");
+        div.className = "computer";
+        div.innerText = agent.hostname;
+        div.onclick = () => showAgentDetails(agent);
+        listDiv.appendChild(div);
+    });
+}
+
+function showAgentDetails(agent) {
+    selectedComputerData = agent;
+    showSystemDetails();
+}
+
+function showSystemDetails() {
+    if (!selectedComputerData) return;
+    document.getElementById("system-table-container").style.display = "block";
+    document.getElementById("process-table-container").style.display = "none";
+
+    const container = document.getElementById("system-table-container");
+    const details = selectedComputerData.system_details;
+
+    // Use last_seen and convert to local time
+    let lastSeenUTC = selectedComputerData.created_at;
+    let lastSeenLocal = lastSeenUTC ? new Date(lastSeenUTC).toLocaleString() : 'N/A';
+
+    let html = `<div style="margin-bottom:5px; font-weight:bold;">
+                    Last Updated: ${lastSeenLocal}
+                </div>`;
+    html += `<table><tr><th>Property</th><th>Value</th></tr>`;
+    for (let key in details) {
+        html += `<tr><td>${key}</td><td>${details[key]}</td></tr>`;
+    }
+    html += `</table>`;
+    container.innerHTML = html;
+}
+
+function showProcessDetails() {
+    if (!selectedComputerData) return;
+    document.getElementById("system-table-container").style.display = "none";
+    const container = document.getElementById("process-table-container");
+    container.style.display = "block";
+
+    // Use last_seen and convert to local time
+    let lastSeenUTC = selectedComputerData.created_at;
+    let lastSeenLocal = lastSeenUTC ? new Date(lastSeenUTC).toLocaleString() : 'N/A';
+
+    const timestampHtml = `<div style="margin-bottom:5px; font-weight:bold;">
+                                Last Updated: ${lastSeenLocal}
+                            </div>`;
+    container.innerHTML = timestampHtml + `<table>
+        <tr><th>Name</th><th>PID</th><th>CPU%</th><th>Memory (MB)</th></tr>
+    </table>`;
+
+    const table = container.querySelector("table");
+    renderProcessTree(selectedComputerData.process_details, table);
+}
+
+// Recursive rendering of process tree
+function renderProcessTree(processList, table, depth=0, parentRows=[]) {
+    processList.forEach(proc => {
+        const row = document.createElement("tr");
+        const hasChildren = proc.children && proc.children.length > 0;
+
+        row.innerHTML = `
+            <td>${hasChildren ? '<span class="arrow">▶</span>' : ''}<span class="indent" style="padding-left:${depth*20}px">${proc.name}</span></td>
+            <td>${proc.pid}</td>
+            <td>${proc.cpu_percent}</td>
+            <td>${proc.memory_mb}</td>
+        `;
+        row.style.display = parentRows.length === 0 ? 'table-row' : 'none';
+        table.appendChild(row);
+
+        if (parentRows) parentRows.push(row);
+
+        if (hasChildren) {
+            row.childRows = [];
+            renderProcessTree(proc.children, table, depth+1, row.childRows);
+
+            const arrow = row.querySelector(".arrow");
+            arrow.onclick = () => {
+                const expanded = arrow.textContent === "▼";
+                arrow.textContent = expanded ? "▶" : "▼";
+                row.childRows.forEach(r => r.style.display = expanded ? "none" : "table-row");
+            };
+        }
+    });
+}
+
+document.getElementById("show-system").onclick = showSystemDetails;
+document.getElementById("show-process").onclick = showProcessDetails;
+
+// Load computers initially
+loadComputers();
+
+  </script>
+</body>
+</html>
