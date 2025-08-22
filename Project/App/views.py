@@ -9,6 +9,9 @@ from rest_framework.response import Response
 from .models import AgentData
 from .serializers import AgentDataSerializer
 from django.utils import timezone
+import datetime
+
+SERVER_START_TIME = datetime.datetime.now(datetime.timezone.utc)
 
 @csrf_exempt
 def collect_data(request):
@@ -34,12 +37,10 @@ def collect_data(request):
 
 @api_view(['GET'])
 def get_data(request):
-    agents = AgentData.objects.order_by('-created_at')
+    from .views import SERVER_START_TIME
+    agents = AgentData.objects.filter(created_at__gte=SERVER_START_TIME).order_by('-created_at')
     serializer = AgentDataSerializer(agents, many=True)
 
-    # Check if it's an AJAX request from frontend
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-        return Response(serializer.data)  # return JSON for JS
-
-    # Otherwise render HTML page
-    return render(request, "index.html")
+        return Response(serializer.data)
+    return render(request, "index.html", {"agents": agents})
