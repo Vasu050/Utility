@@ -2,6 +2,9 @@
 <head>
   <meta charset="UTF-8">
   <title>Agent Dashboard</title>
+   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://getbootstrap.com/docs/5.3/assets/css/docs.css" rel="stylesheet">
+    <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -102,9 +105,19 @@
     .indent {
       padding-left: 20px;
     }
+
+    #process-search {
+      margin-bottom: 10px;
+      width: 300px;
+      display: none; /* Hide by default, show when needed */
+    }
   </style>
 </head>
 <body>
+  <nav class="navbar bg-body-tertiary">
+  <div class="container-fluid">
+  </div>
+</nav>
   <div id="computers">
     <h3>Computers</h3>
     <div id="computer-list"></div>
@@ -114,8 +127,14 @@
     <div class="section-header">
       <button id="show-system">System Details</button>
       <button id="show-process">Running Processes</button>
+      <input 
+        id="process-search" 
+        class="form-control"
+        type="search" 
+        placeholder="Search Processes" 
+        aria-label="Search"
+      />
     </div>
-
     <div id="system-table-container">Select a computer...</div>
     <div id="process-table-container" style="display:none;"></div>
   </div>
@@ -150,6 +169,7 @@ function showSystemDetails() {
     if (!selectedComputerData) return;
     document.getElementById("system-table-container").style.display = "block";
     document.getElementById("process-table-container").style.display = "none";
+    document.getElementById("process-search").style.display = "none"; // Hide search bar
 
     const container = document.getElementById("system-table-container");
     const details = selectedComputerData.system_details;
@@ -174,6 +194,7 @@ function showProcessDetails() {
     document.getElementById("system-table-container").style.display = "none";
     const container = document.getElementById("process-table-container");
     container.style.display = "block";
+    document.getElementById("process-search").style.display = "inline-block"; // Show search bar
 
     // Use last_seen and convert to local time
     let lastSeenUTC = selectedComputerData.created_at;
@@ -227,6 +248,20 @@ document.getElementById("show-process").onclick = showProcessDetails;
 // Load computers initially
 loadComputers();
 
+ // Search functionality
+    const searchInput = document.getElementById('process-search');
+    searchInput.addEventListener('input', () => {
+      const searchTerm = searchInput.value.toLowerCase();
+      const table = document.querySelector("#process-table-container table");
+      if (!table) return;
+
+      const rows = table.querySelectorAll("tr");
+      rows.forEach((row, idx) => {
+        if(idx === 0) return; // skip header
+        const nameCell = row.cells[0].innerText.toLowerCase();
+        row.style.display = nameCell.includes(searchTerm) ? "" : "none";
+      });
+    });
   </script>
 </body>
 </html>
